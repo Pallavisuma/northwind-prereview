@@ -1,0 +1,63 @@
+{
+  "_README": "Held-out expectations for the eval harness. The grader drops in a file shaped like this. Each submission resolves to data/submissions/<name> (employee_info.json + receipts/). 'default_verdict' applies to every receipt not listed in 'line_items'. Citations are 'DOC-ID §SECTION'. Run: python -m scripts.evaluate ../eval/expected_sample.json",
+
+  "submissions": [
+    {
+      "name": "01_clean_denver",
+      "default_verdict": "compliant"
+    },
+    {
+      "name": "02_clean_boston_conf",
+      "default_verdict": "compliant"
+    },
+    {
+      "name": "03_dinner_over_cap",
+      "default_verdict": "compliant",
+      "line_items": {
+        "04_dinner_alinea.pdf": {
+          "verdict": "flagged",
+          "reimbursable_amount": 75.0,
+          "reimbursable_tolerance": 5.0,
+          "citations": ["TEP-002 §2"],
+          "note": "Solo diner $148 dinner vs $75 standard cap (not client entertainment)"
+        }
+      }
+    },
+    {
+      "name": "04_alcohol_solo_travel",
+      "default_verdict": "compliant",
+      "line_items": {
+        "05_dinner_franklin.pdf": {
+          "verdict": "flagged",
+          "reimbursable_amount": 46.85,
+          "reimbursable_tolerance": 3.0,
+          "citations": ["TEP-003 §3.1"],
+          "note": "Alcohol ($26) not reimbursable on solo travel; food reimbursable"
+        }
+      }
+    },
+    {
+      "name": "05_receipt_mismatch",
+      "default_verdict": "compliant",
+      "line_items": {
+        "02_hyatt_seattle.pdf": {
+          "verdict": "flagged",
+          "reimbursable_amount": 700.0,
+          "reimbursable_tolerance": 10.0,
+          "citations": ["TEP-004 §3"],
+          "note": "Seattle is Tier 1 ($350/nt); $457/nt x2 over cap, reimbursable $700"
+        }
+      }
+    }
+  ],
+
+  "qa": [
+    {"question": "Can I expense alcohol when I'm traveling alone on business?", "refused": false, "citations": ["TEP-003 §3.1"]},
+    {"question": "What is the per-person dinner cap for business travel?", "refused": false, "citations": ["TEP-002 §2"]},
+    {"question": "When is business class allowed?", "refused": false, "citations": ["TEP-005 §2.3"]},
+    {"question": "What is the nightly hotel cap for a Tier 1 city?", "refused": false, "citations": ["TEP-004 §3"]},
+    {"question": "How many vacation days do new employees accrue?", "refused": true},
+    {"question": "What is the company's parental leave policy?", "refused": true},
+    {"question": "Who won the 2024 World Series?", "refused": true}
+  ]
+}

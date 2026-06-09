@@ -1,0 +1,22 @@
+# Secrets
+backend/.env
+
+# Runtime state (DB + uploaded receipts live on a volume, never committed)
+backend/data/
+/tmp/nw_state/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Node / frontend (added in the UI phase)
+node_modules/
+frontend/dist/
+
+# OS
+.DS_Store
+
+# Scratch
+chunks_preview.json

@@ -1,0 +1,21 @@
+# Secrets & runtime state — never bake into the image
+backend/.env
+backend/data/
+/tmp/nw_state/
+
+# Python cruft
+**/__pycache__/
+**/*.pyc
+backend/.venv/
+.venv/
+
+# VCS / OS / editor
+.git/
+.gitignore
+.DS_Store
+
+# Docs/scratch not needed at runtime
+*.md
+!frontend/**
+chunks_preview.json
+eval/results.json

@@ -1,0 +1,28 @@
+# Fly.io deployment. A single machine with a persistent volume for SQLite +
+# uploads, so submissions survive restarts. Set the API key as a secret:
+#   fly secrets set GEMINI_API_KEY=...
+app = "northwind-prereview"     # change to your unique app name
+primary_region = "sjc"
+
+[build]
+  dockerfile = "Dockerfile"
+
+[env]
+  NW_STATE_DIR = "/data"
+  PORT = "8080"
+
+[[mounts]]
+  source = "northwind_data"     # persistent volume: survives restarts/redeploys
+  destination = "/data"
+
+[http_service]
+  internal_port = 8080
+  force_https = true
+  auto_stop_machines = "stop"
+  auto_start_machines = true
+  min_machines_running = 0      # scale-to-zero on the free allowance
+
+[[vm]]
+  cpu_kind = "shared"
+  cpus = 1
+  memory_mb = 512
