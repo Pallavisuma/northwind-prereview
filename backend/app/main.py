@@ -21,21 +21,36 @@ from app.models import Employee, LineItem, Submission
 
 # --- startup --------------------------------------------------------------
 
-def _restore_seed_index_if_needed() -> None:
-    """On first boot, if there's no runtime DB but a shipped seed index exists,
-    copy it in so the app is usable immediately with no embedding calls."""
-    from app.config import DB_PATH, SEED_INDEX
-    import shutil
-    if not DB_PATH.exists() and SEED_INDEX.exists():
-        DB_PATH.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copy(SEED_INDEX, DB_PATH)
-        print(f"[startup] restored policy index from {SEED_INDEX.name}")
+def _load_seed_index_if_needed() -> None:
+    """On first boot, if the DB has no policy chunks but a shipped seed index
+    exists, port its rows in — so the app works immediately with no embedding
+    calls. Backend-agnostic (reads the SQLite seed, writes via SQLAlchemy), so
+    it works the same for SQLite and Postgres."""
+    import sqlite3
+    from app.config import SEED_INDEX
+    from app.models import PolicyChunk, Meta
+    db = SessionLocal()
+    try:
+        if db.query(PolicyChunk).count() > 0 or not SEED_INDEX.exists():
+            return
+        con = sqlite3.connect(str(SEED_INDEX))
+        cols = ["chunk_id", "doc_id", "doc_title", "family", "section",
+                "heading", "text", "source_pdf", "page_start", "embedding"]
+        rows = con.execute(f"SELECT {','.join(cols)} FROM policy_chunks").fetchall()
+        db.bulk_save_objects([PolicyChunk(**dict(zip(cols, r))) for r in rows])
+        for k, v in con.execute("SELECT key, value FROM meta").fetchall():
+            db.merge(Meta(key=k, value=v))
+        con.close()
+        db.commit()
+        print(f"[startup] loaded {len(rows)} policy chunks from seed index")
+    finally:
+        db.close()
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    _restore_seed_index_if_needed()
     init_db()
+    _load_seed_index_if_needed()
     db = SessionLocal()
     try:
         store.seed_employees(db)

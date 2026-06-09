@@ -30,11 +30,25 @@ DB_PATH = STATE_DIR / "northwind.db"
 UPLOADS_DIR = STATE_DIR / "uploads"
 UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
 
-DB_URL = f"sqlite:///{DB_PATH}"
+# Database: Postgres in production (set DATABASE_URL, e.g. Neon/Render), else
+# local SQLite. SQLAlchemy makes the rest backend-agnostic.
+_env_db = os.environ.get("DATABASE_URL", "").strip()
+if _env_db:
+    # Normalize to the psycopg v3 driver SQLAlchemy expects.
+    if _env_db.startswith("postgres://"):
+        _env_db = "postgresql+psycopg://" + _env_db[len("postgres://"):]
+    elif _env_db.startswith("postgresql://"):
+        _env_db = "postgresql+psycopg://" + _env_db[len("postgresql://"):]
+    DB_URL = _env_db
+else:
+    DB_URL = f"sqlite:///{DB_PATH}"
 
-# Pre-built policy index shipped in the repo. On first boot, if the runtime DB
-# doesn't exist yet, we restore from this so the deployed app is usable
+IS_SQLITE = DB_URL.startswith("sqlite")
+
+# Pre-built policy index shipped in the repo. On first boot, if the database has
+# no policy chunks yet, we load them from here so the deployed app is usable
 # immediately without re-embedding (saves quota + avoids a slow cold start).
+# Works for both SQLite and Postgres (rows are ported, not the file).
 SEED_INDEX = DATA_DIR / "policy_index.db"
 
 # --- Gemini ---------------------------------------------------------------

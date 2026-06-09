@@ -7,3 +7,4 @@ google-genai==1.43.0
 python-multipart==0.0.20
 pillow==11.1.0
 python-dotenv==1.0.1
+psycopg[binary]==3.2.3

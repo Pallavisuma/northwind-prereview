@@ -214,33 +214,44 @@ immediately **without spending any embedding quota at startup**.
 
 ---
 
-## Deploy (GitHub + Fly.io)
+## Deploy
 
-One container, one persistent volume. Fly.io is the default because its free
-allowance includes volumes (so SQLite state survives restarts) and scale-to-zero.
+The app is one Docker image (FastAPI serves the API and the UI). The prebuilt
+policy index (`data/policy_index.db`) ships in the repo and is loaded into the
+database on first boot, so the URL is usable immediately with **no embedding at
+startup**. The database is swappable: SQLite locally, **Postgres in production**
+(set `DATABASE_URL`).
+
+### Free path — Render + Neon Postgres (no card)
 
 ```bash
-# 0. Generate the prebuilt policy index seed (DB-only, no API calls) and commit it
-cd backend && python -m app.ingest.embed        # if not already built
-python -m scripts.export_policy_index            # writes data/policy_index.db
+# 1. Build the index + export the seed (DB-only, no API), then push
+cd backend && python -m app.ingest.embed
+python -m scripts.export_policy_index
+cd .. && git add -A && git commit -m "deploy" && git push
+```
 
-# 1. Push to a public GitHub repo
-cd ..
-git init && git add -A && git commit -m "Northwind expense pre-review"
-git remote add origin https://github.com/<you>/northwind-prereview.git
-git push -u origin main
+2. Create a free Postgres at **[neon.tech](https://neon.tech)** → copy the
+   connection string (`postgresql://...?sslmode=require`).
+3. At **[render.com](https://render.com)** → New → Web Service → connect the repo
+   (it reads `render.yaml`, builds the Dockerfile, free plan). Set env vars:
+   `GEMINI_API_KEY` and `DATABASE_URL` (the Neon string). Deploy.
 
-# 2. Deploy (installs flyctl: https://fly.io/docs/flyctl/install/)
-fly launch --no-deploy        # accept the bundled fly.toml; pick a unique app name
+State lives in Neon, so it survives Render's restarts/redeploys. (Render's free
+filesystem is ephemeral; only the re-derivable extraction cache and uploaded
+files live there — all review data is in Postgres.)
+
+### Alternative — Fly.io (persistent volume, ~$2–3/mo)
+
+```bash
+fly launch --no-deploy            # accepts bundled fly.toml
 fly volume create northwind_data --size 1
 fly secrets set GEMINI_API_KEY=<your-key>
 fly deploy
 ```
 
-The container restores the prebuilt index on first boot, so the URL is usable
-immediately — no embedding at startup. Any host that gives you a persistent
-disk works the same way (Render with a disk, Railway, a VM); point
-`NW_STATE_DIR` at the mount.
+Fly uses SQLite on the mounted volume (no `DATABASE_URL` needed). Any host with a
+persistent disk works the same way — point `NW_STATE_DIR` at the mount.
 
 ---
 

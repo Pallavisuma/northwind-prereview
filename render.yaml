@@ -1,0 +1,15 @@
+# Render Blueprint: free web service from the Dockerfile. Persistence comes from
+# an external free Postgres (Neon/Supabase) set via DATABASE_URL — Render's free
+# tier has no persistent disk, so state lives in Postgres instead of SQLite.
+services:
+  - type: web
+    name: northwind-prereview
+    runtime: docker
+    plan: free
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /api/health
+    envVars:
+      - key: GEMINI_API_KEY
+        sync: false          # set in the Render dashboard
+      - key: DATABASE_URL
+        sync: false          # your Neon/Supabase Postgres connection string
