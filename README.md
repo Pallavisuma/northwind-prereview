@@ -9,7 +9,11 @@ the final call and can override any verdict with an audited comment. The system
 also answers ad-hoc policy questions with grounded citations, and declines
 questions outside the policy library rather than guessing.
 
-> **Live demo:** _<your deployed URL>_ · **Repo:** _<your GitHub URL>_
+> **Live demo:** https://northwind-prereview.onrender.com
+> **Repo:** https://github.com/Pallavisuma/northwind-prereview
+>
+> _(Hosted free on Render + Neon Postgres; the free instance sleeps when idle, so
+> the first request after a nap takes ~30–60s to wake.)_
 
 The guiding principle throughout: **be useful, but never confidently wrong.**
 Where the evidence is thin, the system says so.
@@ -153,6 +157,13 @@ spurious "missing required field" flag. Extraction reports its own confidence
 and warnings and **never decides compliance** — it only transcribes facts, so
 each stage is independently auditable.
 
+Real receipts are also messy in small ways, and we normalize the obvious
+artifacts rather than passing nonsense downstream: e.g. when subtotal + tax
+exceeds the printed total (an unparsed discount/comp shows up as a *negative*
+implied tip), we drop the bogus value and attach a warning for the reviewer.
+Genuinely illegible fields come back low-confidence with an explicit warning
+instead of a confident guess.
+
 ### 4. Schema-constrained outputs everywhere
 Every model call uses a Pydantic `response_schema` (extraction, verdict, Q&A).
 Downstream code never parses prose. This is the single biggest reliability lever
@@ -200,11 +211,14 @@ quota** instead of burning retries. Extractions are **content-addressed cached**
 so re-processing an identical receipt is free.
 
 ### 8. Persistence & audit
-SQLite on a volume. Verdicts are an immutable record of what the model said;
-overrides are an **append-only `override_events` log** — we never mutate a
-verdict in place, so the full history (who, what, why, when) is preserved and
-the "effective" verdict is simply the latest override. Survives restarts;
-in-memory is never used.
+SQLite by default, **swappable to Postgres via `DATABASE_URL`** (one env var;
+the ORM makes the rest backend-agnostic). We chose this because free hosting
+(Render) has no persistent disk — so production points at a free Neon Postgres
+while local dev stays zero-config on SQLite. Verdicts are an immutable record of
+what the model said; overrides are an **append-only `override_events` log** — we
+never mutate a verdict in place, so the full history (who, what, why, when) is
+preserved and the "effective" verdict is simply the latest override. Survives
+restarts; in-memory is never used.
 
 ### 9. Deployment: one image, instant cold start
 The whole thing is one container (FastAPI serves the API *and* the single-file
